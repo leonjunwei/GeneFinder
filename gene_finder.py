@@ -1,3 +1,11 @@
+"""
+@author: Leon Lam (@leonjunwei)
+Last updated: 01/30/16
+
+This code analyzes a DNA sequence and outputs snippets of DNA that are likely to be protein-coding genes.
+"""
+
+
 import random
 from amino_acids import aa, codons, aa_table   # you may find these useful
 from load import load_seq
@@ -31,6 +39,8 @@ def get_complement(nucleotide):
     elif nucleotide == 'G':
         return 'C'
 
+# print get_complement('C')
+
 
 def get_reverse_complement(dna):
     """ Computes the reverse complementary sequence of DNA for the specfied DNA
@@ -43,10 +53,12 @@ def get_reverse_complement(dna):
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
     """
-    result = []
+    result = ""
     for i in dna:
-        result.append(get_complement(i))
-    return "".join(result[::-1])
+        result += (get_complement(i))
+    return result[::-1]
+
+# print get_reverse_complement("CCGCGTTCA")
 
 
 def rest_of_ORF(dna):
@@ -62,12 +74,13 @@ def rest_of_ORF(dna):
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
     """
-    stopcodon = [["T", "A", "G"], ["T", "A", "A"], ["T", "G", "A"]]
-    for i in xrange(0, len(dna) - 2, 3):
-        testframe = []
-        for x in xrange(0, 3, 1):
-            testframe.append(str(dna[i + x]))
-        if testframe in stopcodon:
+    stopcodon = [
+        'TAG', 'TAA', 'TGA']  # [["T", "A", "G"],["T", "A","A"],["T","G","A"]]
+    for i in range(0, len(dna) - 2, 3):
+        # dna is formatted as "ATGAGATAGG", so list slicing on dna gives a
+        # concatenated string
+        testcodon = dna[i:i + 3]
+        if testcodon in stopcodon:
             return dna[0:i]
     return dna
 
@@ -87,12 +100,12 @@ def find_all_ORFs_oneframe(dna):
     """
     result = []
     count = 0
-    for i in xrange(0, len(dna) - 2, 3):
-        testframe = []
-        for x in xrange(0, 3, 1):
-            testframe.append(str(dna[i + x]))
-        if testframe == ["A", "T", "G"]:
-            x = rest_of_ORF("".join(dna[i:]))
+    for i in range(0, len(dna) - 2, 3):
+        testframe = dna[i:i + 3]
+        # Be very careful about the variable type! ["ATG"] is not the same as
+        # "ATG".
+        if testframe == "ATG":
+            x = rest_of_ORF(dna[i:])
             result.append(x)
             if count > 0:
                 for j in result[0:len(result) - 1]:
@@ -100,6 +113,7 @@ def find_all_ORFs_oneframe(dna):
                         result.remove(x)
             count += 1
     return result
+
 # print find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
 
 
@@ -117,7 +131,7 @@ def find_all_ORFs(dna):
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
     """
     result = []
-    for i in xrange(0, 3):
+    for i in range(0, 3):
         result = result + (find_all_ORFs_oneframe(dna[i:]))
     return result
 
@@ -135,10 +149,9 @@ def find_all_ORFs_both_strands(dna):
     """
     result = (find_all_ORFs(dna)) + \
         (find_all_ORFs(get_reverse_complement(dna)))
-    # result+=(find_all_ORFs(dna))
-    # result+=(find_all_ORFs(get_reverse_complement(dna)))
     result = [x for x in result if x != []]
     return result
+
 # print find_all_ORFs_both_strands("ATGCGAATGTAGCATCAAA")
 
 
@@ -154,7 +167,8 @@ def longest_ORF(dna):
         elementArray.append(i)
         elementLengthArray.append(len(i))
     return [x for x in elementArray if len(x) == max(elementLengthArray)]
-print longest_ORF("ATGCGAATGTAGCATCAAA")
+
+# print longest_ORF("ATGCGAATGTAGCATCAAA")
 
 
 def longest_ORF_noncoding(dna, num_trials):
@@ -195,6 +209,6 @@ def gene_finder(dna):
     # TODO: implement this
     pass
 
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+# if __name__ == "__main__":
+#     import doctest
+#     doctest.testmod()
