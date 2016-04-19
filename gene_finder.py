@@ -9,7 +9,12 @@ This code analyzes a DNA sequence and outputs snippets of DNA that are likely to
 import random
 from amino_acids import aa, codons, aa_table   # you may find these useful
 from load import load_seq
+from load import load_contigs
+contigs = load_contigs()
 
+mycontig = contigs[2][1]
+newcontig = "".join(['A' if x not in 'ATGC' else x for x in mycontig])
+# print newcontig
 
 def shuffle_string(s):
     """Shuffles the characters in the input string
@@ -19,25 +24,31 @@ def shuffle_string(s):
 
 # YOU WILL START YOUR IMPLEMENTATION FROM HERE DOWN ###
 
+# compl = {"A":"T","T":"A","C":"G","G":"C"}
+# def get_complement(nucleotide):
+#     """ Returns the complementary nucleotide
 
-def get_complement(nucleotide):
-    """ Returns the complementary nucleotide
+#         nucleotide: a nucleotide (A, C, G, or T) represented as a string
+#         returns: the complementary nucleotide
+#     >>> get_complement('A')
+#     'T'
+#     >>> get_complement('C')
+#     'G'
+#     """
 
-        nucleotide: a nucleotide (A, C, G, or T) represented as a string
-        returns: the complementary nucleotide
-    >>> get_complement('A')
-    'T'
-    >>> get_complement('C')
-    'G'
-    """
-    if nucleotide == 'A':
-        return 'T'
-    elif nucleotide == 'T':
-        return 'A'
-    elif nucleotide == 'C':
-        return 'G'
-    elif nucleotide == 'G':
-        return 'C'
+#     try:
+#         return compl[nucleotide]
+#     except KeyError:
+#         return "X"
+
+    # if nucleotide == 'A':
+    #     return 'T'
+    # elif nucleotide == 'T':
+    #     return 'A'
+    # elif nucleotide == 'C':
+    #     return 'G'
+    # elif nucleotide == 'G':
+    #     return 'C'
 
 #print get_complement('C')
 
@@ -53,9 +64,11 @@ def get_reverse_complement(dna):
     'TGAACGCGG'
     """
     result = ""
+    compl = {"A":"T","T":"A","C":"G","G":"C"}
     for i in dna:
-        result+=(get_complement(i))
+        result+=compl[i]
     return result[::-1]
+
 
 # print get_reverse_complement("CCGCGTTCA")
 
@@ -74,8 +87,7 @@ def rest_of_ORF(dna):
     """
     stopcodon = ['TAG','TAA','TGA']
     for i in range(0,len(dna)-2,3):
-        testcodon = dna[i:i+3] #dna is formatted as "ATGAGATAGG", so list slicing on dna gives a concatenated string
-        if testcodon in stopcodon:
+        if dna[i:i+3] in stopcodon: #dna is formatted as "ATGAGATAGG", so list slicing on dna gives a concatenated string
             return dna[0:i]
     return dna
 
@@ -97,10 +109,8 @@ def find_all_ORFs_oneframe(dna):
     i = 0
     stopcodon = ['TAG','TAA','TGA']
     while i<len(dna)-2:
-        testframe = dna[i:i+3]
-        if testframe == "ATG": #Be very careful about the variable type! ["ATG"] is not the same as "ATG".
-            x = rest_of_ORF(dna[i:])
-            result.append(x)
+        if dna[i:i+3] == "ATG": #Be very careful about the variable type! ["ATG"] is not the same as "ATG".
+            result.append(rest_of_ORF(dna[i:]))
             i = next((m for m in range(i+3,len(dna)-2, 3) if dna[m:m+3] in stopcodon), len(dna)-2)
             # i = y
         else:
@@ -125,7 +135,7 @@ def find_all_ORFs(dna):
     """
     result = []
     for i in range(0,3):
-        result = result + (find_all_ORFs_oneframe(dna[i:]))
+        result+=(find_all_ORFs_oneframe(dna[i:])) #find_all_ORFs outputs a list, and we want to add the elements and not append a list to another list.
     return result
 
 # print find_all_ORFs("ATGCATGAATGTAG")
@@ -152,16 +162,18 @@ def longest_ORF(dna):
     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
     'ATGCTACATTCGCAT'
     """
-    elementArray = []
-    elementLengthArray = []
+    store = {}
+    largestlength = 0
     for i in find_all_ORFs_both_strands(dna):
-        elementArray.append(i)
-        elementLengthArray.append(len(i))
-    return [x for x in elementArray if len(x) == max(elementLengthArray)]
+        if len(i)>largestlength:
+            store[len(i)] = i
+            largestlength = len(i)
+    return store[largestlength]
 
 # print longest_ORF("ATGCGAATGTAGCATCAAA")
 
-dna = load_seq("/home/leon/GeneFinder/data/X73525.fa")
+# dna = load_seq("/home/leon/GeneFinder/data/X73525.fa")
+# print dna
 
 def longest_ORF_noncoding(dna, num_trials):
     """ Computes the maximum length of the longest ORF over num_trials shuffles
@@ -173,12 +185,12 @@ def longest_ORF_noncoding(dna, num_trials):
 
     count = 0
     for i in range(num_trials):
-        x = len(max(longest_ORF(shuffle_string(dna))))
+        x = len(longest_ORF(shuffle_string(dna)))
         if x > count:
             count = x
     return count
 
-# print longest_ORF_noncoding(dna, 1000)
+# print longest_ORF_noncoding(newcontig, 1)
 
 
 def coding_strand_to_AA(dna):
@@ -207,12 +219,12 @@ def gene_finder(dna):
         dna: a DNA sequence
         returns: a list of all amino acid sequences coded by the sequence dna.
     """
-    threshold = longest_ORF_noncoding(dna, 1000)
+    threshold = 1500#longest_ORF_noncoding(dna, 1)
     orfList = find_all_ORFs_both_strands(dna)
     aaList = [coding_strand_to_AA(c) for c in orfList if len(c)>threshold]
     return aaList
 
-print gene_finder(dna)
+print gene_finder(newcontig)
 
 
 # if __name__ == "__main__":
